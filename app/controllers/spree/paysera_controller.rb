@@ -139,6 +139,7 @@ module Spree
 
 
         def build_request(paysera_params)
+            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = '1.6'
             paysera_params[:projectid] = payment_method.preferred_project_id
