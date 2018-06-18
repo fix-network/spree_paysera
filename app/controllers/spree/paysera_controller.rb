@@ -47,7 +47,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.getProjectId
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != preferred_project_id
             #find order in the database
             order = Spree::Order.find_by(number: response[:orderid])
             #check for order amount
@@ -83,7 +83,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.getProjectId
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != preferred_project_id
         end
         def cancel
         end
@@ -96,7 +96,7 @@ module Spree
             raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
             raise send_error("'ss2' parameter was not found") if query[:ss2].nil?
       
-            projectid ||= Spree::Gateway::Paysera.getProjectId
+            projectid ||= preferred_project_id
             raise send_error("'projectid' parameter was not found") if projectid.nil?
       
             sign_password ||= Spree::Gateway::Paysera.getSignKey
@@ -140,7 +140,7 @@ module Spree
         def build_request(paysera_params)
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = '1.6'
-            paysera_params[:projectid] = Spree::Gateway::Paysera.getProjectId
+            paysera_params[:projectid] = preferred_project_id
             sign_password              = Spree::Gateway::Paysera.getSignKey
             #puts paysera_params.to_json
             valid_request = validate_request(paysera_params)

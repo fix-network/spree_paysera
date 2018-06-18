@@ -1,6 +1,9 @@
 class Spree::Gateway::Paysera < Spree::Gateway
     preference :sign_key, :string
     preference :project_id, :integer
+    def self.super
+        super
+    end
     def provider_class
       Paysera
     end
