@@ -1,6 +1,9 @@
 class Spree::Gateway::Paysera < Spree::Gateway
     preference :sign_key, :string
     preference :project_id, :integer
+    preference :domain_name, :string
+    preference :message_text, :string
+    preference :service_url, :string, default: 'https://www.paysera.lt/pay/?'
     def self.super
         super
     end

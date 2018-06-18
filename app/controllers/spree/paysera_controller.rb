@@ -14,18 +14,18 @@ module Spree
             success_url = paysera_confirm_url.to_s
             callback_url = paysera_callback_url.to_s
             cancel_url = paysera_cancel_url.to_s
-            service_url = 'https://www.paysera.lt/pay/?'
+            service_url = payment_method.preferred_service_url
             order = current_order || raise(ActiveRecord::RecordNotFound)
             amount = order.total*100
             options = {
                 orderid: order.number,
-                accepturl: "http://213.164.124.89" + success_url[21..-1],
-                cancelurl: "http://213.164.124.89" + cancel_url[21..-1],
-                callbackurl: "http://213.164.124.89" + callback_url[21..-1],
+                accepturl: payment_method.preferred_domain_name + success_url[21..-1],
+                cancelurl: payment_method.preferred_domain_name + cancel_url[21..-1],
+                callbackurl: payment_method.preferred_domain_name + callback_url[21..-1],
                 amount: amount.to_i,
                 currency: 'EUR',
-                test: 1,
-                paytext: "Užsakymo Nr. #{order.number} apmokėjimas. liligold.lt",
+                test: payment_method.preferred_test_mode,
+                paytext: payment_method.preferred_message_text,
                 p_firstname: order.bill_address.firstname,
                 p_lastname: order.bill_address.lastname,
                 p_street: order.bill_address.address1 + " " + order.bill_address.address2,
@@ -91,8 +91,9 @@ module Spree
 
         private
         PAYSERA_PUBLIC_KEY = 'http://www.paysera.com/download/public.key'
-        payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+        
         def parse(query)
+            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             raise send_error("'data' parameter was not found") if query[:data].nil?
             raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
             raise send_error("'ss2' parameter was not found") if query[:ss2].nil?
