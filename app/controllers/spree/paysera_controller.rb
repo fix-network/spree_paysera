@@ -17,6 +17,8 @@ module Spree
             service_url = payment_method.preferred_service_url
             order = current_order || raise(ActiveRecord::RecordNotFound)
             amount = order.total*100
+            test_value = 0
+            test_value = 1 if ayment_method.preferred_test_mode
             options = {
                 orderid: order.number,
                 accepturl: payment_method.preferred_domain_name + success_url[21..-1],
@@ -24,7 +26,7 @@ module Spree
                 callbackurl: payment_method.preferred_domain_name + callback_url[21..-1],
                 amount: amount.to_i,
                 currency: 'EUR',
-                test: payment_method.preferred_test_mode,
+                test: test_value,
                 paytext: payment_method.preferred_message_text,
                 p_firstname: order.bill_address.firstname,
                 p_lastname: order.bill_address.lastname,
