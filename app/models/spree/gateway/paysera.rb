@@ -1,6 +1,6 @@
 class Spree::Gateway::Paysera < Spree::Gateway
-    preference :sign_key, :string
     preference :project_id, :integer
+    preference :sign_key, :string
     preference :domain_name, :string
     preference :message_text, :string
     preference :service_url, :string, default: 'https://www.paysera.lt/pay/?'
@@ -20,7 +20,6 @@ class Spree::Gateway::Paysera < Spree::Gateway
     end
 
     def purchase(amount, transaction_details, options = {})
-
         ActiveMerchant::Billing::Response.new(true, 'Paysera success', {},{})
     end
     
