@@ -9,8 +9,8 @@ require 'open-uri'
 module Spree
     class PayseraController < StoreController
         protect_from_forgery only: :index
+        payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
         def index
-            payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
             success_url = paysera_confirm_url.to_s
             callback_url = paysera_callback_url.to_s
             cancel_url = paysera_cancel_url.to_s
@@ -38,7 +38,6 @@ module Spree
             end
         end 
         def callback
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             Spree::LogEntry.create({
                 source: payment_method,
                 details: params.to_yaml
@@ -47,7 +46,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.preferred_project_id
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
             #find order in the database
             order = Spree::Order.find_by(number: response[:orderid])
             #check for order amount
@@ -83,7 +82,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.preferred_project_id
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
         end
         def cancel
         end
@@ -96,10 +95,10 @@ module Spree
             raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
             raise send_error("'ss2' parameter was not found") if query[:ss2].nil?
       
-            projectid ||= Spree::Gateway::Paysera.preferred_project_id
+            projectid ||= payment_method.preferred_project_id
             raise send_error("'projectid' parameter was not found") if projectid.nil?
       
-            sign_password ||= Spree::Gateway::Paysera.preferred_sign_key
+            sign_password ||= payment_method.preferred_sign_key
             raise send_error("'sign_password' parameter was not found") if sign_password.nil?
       
             raise send_error("Unable to verify 'ss1'") unless valid_ss1? query[:data], query[:ss1], sign_password
@@ -140,8 +139,8 @@ module Spree
         def build_request(paysera_params)
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = '1.6'
-            paysera_params[:projectid] = Spree::Gateway::Paysera.preferred_project_id
-            sign_password              = Spree::Gateway::Paysera.preferred_sign_key
+            paysera_params[:projectid] = payment_method.preferred_project_id
+            sign_password              = payment_method.preferred_sign_key
             #puts paysera_params.to_json
             valid_request = validate_request(paysera_params)
             encoded_query  = encode_string make_query(valid_request)
