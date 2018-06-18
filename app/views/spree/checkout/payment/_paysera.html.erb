@@ -1,4 +1,4 @@
-<%= link_to(image_tag(Paysera::PaymentMethod.find_by(name: "Paysera").preferred_image_url), paysera_proceed_url(:payment_method_id => payment_method.id), :method => :post, :id => "paysera_button") %>
+<%= link_to(image_tag(payment_method.preferred_image_url), paysera_proceed_url(:payment_method_id => payment_method.id), :method => :post, :id => "paysera_button") %>
 
 <script>
 Paysera = {
