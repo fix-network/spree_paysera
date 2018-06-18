@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
 
   s.author    = 'Donatas Jarmalovičius'
   s.email     = 'ddonatasjar@gmail.com'
-  s.homepage  = 'https://github.com/'
+  s.homepage  = 'https://github.com/donny741/'
 
   s.require_path = 'lib'
   s.requirements << 'none'
