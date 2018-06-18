@@ -14,7 +14,12 @@ class Spree::Gateway::Paysera < Spree::Gateway
     def method_type
       'paysera'
     end
-
+    def getSignKey
+        preferred_sign_key
+    end
+    def getProjectId
+        preferred_project_id
+    end
 
     def purchase(amount, transaction_details, options = {})
 

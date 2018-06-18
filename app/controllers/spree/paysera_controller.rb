@@ -47,7 +47,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.project_id
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.getProjectId
             #find order in the database
             order = Spree::Order.find_by(number: response[:orderid])
             #check for order amount
@@ -83,7 +83,7 @@ module Spree
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.project_id
+            raise send_error("'projectid' mismatch") if response[:projectid].to_i != Spree::Gateway::Paysera.getProjectId
         end
         def cancel
         end
@@ -96,10 +96,10 @@ module Spree
             raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
             raise send_error("'ss2' parameter was not found") if query[:ss2].nil?
       
-            projectid ||= Spree::Gateway::Paysera.project_id
+            projectid ||= Spree::Gateway::Paysera.getProjectId
             raise send_error("'projectid' parameter was not found") if projectid.nil?
       
-            sign_password ||= Spree::Gateway::Paysera.sign_key
+            sign_password ||= Spree::Gateway::Paysera.getSignKey
             raise send_error("'sign_password' parameter was not found") if sign_password.nil?
       
             raise send_error("Unable to verify 'ss1'") unless valid_ss1? query[:data], query[:ss1], sign_password
@@ -140,8 +140,8 @@ module Spree
         def build_request(paysera_params)
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = '1.6'
-            paysera_params[:projectid] = Spree::Gateway::Paysera.project_id
-            sign_password              = Spree::Gateway::Paysera.sign_key
+            paysera_params[:projectid] = Spree::Gateway::Paysera.getProjectId
+            sign_password              = Spree::Gateway::Paysera.getSignKey
             #puts paysera_params.to_json
             valid_request = validate_request(paysera_params)
             encoded_query  = encode_string make_query(valid_request)
