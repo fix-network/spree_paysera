@@ -9,8 +9,8 @@ require 'open-uri'
 module Spree
     class PayseraController < StoreController
         protect_from_forgery only: :index
-        payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
         def index
+            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             success_url = paysera_confirm_url.to_s
             callback_url = paysera_callback_url.to_s
             cancel_url = paysera_cancel_url.to_s
@@ -38,6 +38,7 @@ module Spree
             end
         end 
         def callback
+            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             Spree::LogEntry.create({
                 source: payment_method,
                 details: params.to_yaml
@@ -90,6 +91,7 @@ module Spree
 
         private
         PAYSERA_PUBLIC_KEY = 'http://www.paysera.com/download/public.key'
+        payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
         def parse(query)
             raise send_error("'data' parameter was not found") if query[:data].nil?
             raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
