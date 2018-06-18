@@ -82,6 +82,7 @@ module Spree
               end
         end
         def confirm
+            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
