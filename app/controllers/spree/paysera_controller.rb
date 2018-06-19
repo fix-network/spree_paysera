@@ -76,6 +76,13 @@ module Spree
         end
         def confirm
             payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+            if params[:data].nil? 
+                flash.notice = 'Unexpected error.'
+                begin
+                redirect_to checkout_state_path(order.state)
+                end
+                return
+            end
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
@@ -86,11 +93,11 @@ module Spree
             if order.payment_state != "paid"
                 flash.alert = 'Payment failed.'
                 begin
-                redirect_to checkout_state_path(order.state)
+                redirect_to products_path
                 end
                 return
             end
-            flash.notify = 'Payment completed successfully.'
+            flash.notice = 'Payment completed successfully.'
             begin
             redirect_to checkout_state_path(order.state)
             end
@@ -98,7 +105,7 @@ module Spree
         end
 
         def cancel
-            flash.notify = 'Payment has been canceled.'
+            flash.notice = 'Payment has been canceled.'
             begin
             redirect_to checkout_state_path(order.state)
             end
