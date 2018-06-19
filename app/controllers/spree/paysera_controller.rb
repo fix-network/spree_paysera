@@ -40,6 +40,12 @@ module Spree
             end
         end 
         def callback
+            if params[:data].nil? 
+                begin
+                redirect_to products_path
+                end
+                return
+            end
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             Spree::LogEntry.create({
                 source: payment_method,
@@ -75,7 +81,6 @@ module Spree
         def confirm
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             if params[:data].nil? 
-                flash.notice = 'Unexpected error.'
                 begin
                 redirect_to products_path
                 end
