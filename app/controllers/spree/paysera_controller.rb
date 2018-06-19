@@ -45,7 +45,6 @@ module Spree
                 source: payment_method,
                 details: params.to_yaml
             })
-
             #parse response, perform validations etc.
             response = parse(params) unless params[:data].nil?
             #check projectid
@@ -54,12 +53,8 @@ module Spree
             order = Spree::Order.find_by(number: response[:orderid])
             #check for order amount
             money = order.total * 100
-            puts "money amount" + response[:payamount].to_s + " " + money.to_s
             if response[:payamount].to_i != money.to_i
-                flash.alert = 'Malicious transaction detected. Order amount not matched.'
-                begin
-                redirect_to checkout_state_path(order.state)
-                end
+                render plain: 'ERROR. BAD ORDER AMOUNT'
                 return
             end
             payment = order.payments.create!({
@@ -75,9 +70,7 @@ module Spree
                 render plain: 'OK'
                 return
               else
-                begin
-                redirect_to checkout_state_path(order.state)
-                end
+                render plain: 'Error processing payment'
                 return
               end
         end
@@ -87,8 +80,28 @@ module Spree
             response = parse(params) unless params[:data].nil?
             #check projectid
             raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
+            #finding order
+            order = Spree::Order.find_by(number: response[:orderid])
+            #checking amount
+            if order.payment_state != "paid"
+                flash.alert = 'Payment failed.'
+                begin
+                redirect_to checkout_state_path(order.state)
+                end
+                return
+            end
+            flash.notify = 'Payment completed successfully.'
+            begin
+            redirect_to checkout_state_path(order.state)
+            end
+            return
         end
+
         def cancel
+            flash.notify = 'Payment has been canceled.'
+            begin
+            redirect_to checkout_state_path(order.state)
+            end
         end
 
 
@@ -97,22 +110,20 @@ module Spree
         
         def parse(query)
             payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
-            raise send_error("'data' parameter was not found") if query[:data].nil?
-            raise send_error("'ss1' parameter was not found") if query[:ss1].nil?
-            raise send_error("'ss2' parameter was not found") if query[:ss2].nil?
+            render plain: "Error: data not found" if query[:data].nil?
+            render plain: "Error: ss1 not found" if query[:ss1].nil?
+            render plain: "Error: ss2 not found" if query[:ss2].nil?
       
             projectid ||= payment_method.preferred_project_id
-            raise send_error("'projectid' parameter was not found") if projectid.nil?
+            render plain: "Error: projectid not found" if projectid.nil?
       
             sign_password ||= payment_method.preferred_sign_key
-            raise send_error("'sign_password' parameter was not found") if sign_password.nil?
+            render plain: "Error: sign_password not found" if sign_password.nil?
       
-            raise send_error("Unable to verify 'ss1'") unless valid_ss1? query[:data], query[:ss1], sign_password
-            raise send_error("Unable to verify 'ss2'") unless valid_ss2? query[:data], query[:ss2]
+            render plain: "ss1 verification failed" unless valid_ss1? query[:data], query[:ss1], sign_password
+            render plain: "ss2 verification failed" unless valid_ss2? query[:data], query[:ss2]
       
             convert_to_hash safely_decode_string(query[:data])
-      
-            
           end
           def convert_to_hash(query)
             Hash[query.split('&').collect do |s|
@@ -145,10 +156,9 @@ module Spree
         def build_request(paysera_params)
             payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
-            paysera_params[:version]   = '1.6'
+            paysera_params[:version]   = payment_method.preferred_api_version
             paysera_params[:projectid] = payment_method.preferred_project_id
             sign_password              = payment_method.preferred_sign_key
-            #puts paysera_params.to_json
             valid_request = validate_request(paysera_params)
             encoded_query  = encode_string make_query(valid_request)
             signed_request = sign_request(encoded_query, sign_password)
@@ -157,154 +167,150 @@ module Spree
                                    :sign => signed_request
                                })
             query
-          end
+        end
           
-            def validate_request(req)
-              request = {}
-              
-              REQUEST.each do |k, v|
-                raise "'#{k}' is required but missing" if v[:required] and req[k].nil?
-        
-                req_value = req[k].to_s
-                regex     = v[:regex].to_s
-                maxlen    = v[:maxlen]
-        
-                unless req[k].nil?
-                  raise "'#{k}' value '#{req[k]}' is too long, #{v[:maxlen]} characters allowed." if maxlen and req_value.length > maxlen
-                  raise "'#{k}' value '#{req[k]}' invalid." if '' != regex and !req_value.match(regex)
-                  request[k] = req[k]
-                end
-              end
-        
-              request
+        def validate_request(req)
+            request = {}
+            REQUEST.each do |k, v|
+            raise "'#{k}' is required but missing" if v[:required] and req[k].nil?
+            req_value = req[k].to_s
+            regex     = v[:regex].to_s
+            maxlen    = v[:maxlen]
+            unless req[k].nil?
+                raise "'#{k}' value '#{req[k]}' is too long, #{v[:maxlen]} characters allowed." if maxlen and req_value.length > maxlen
+                raise "'#{k}' value '#{req[k]}' invalid." if '' != regex and !req_value.match(regex)
+                request[k] = req[k]
             end
-            def make_query(data)
-              data.collect do |key, value|
-                "#{CGI.escape(key.to_s)}=#{CGI.escape(value.to_s)}"
-              end.compact.sort! * '&'
-              
             end
-        
-            def sign_request(query, password)
-              Digest::MD5.hexdigest(query + password)
-            end
-        
-            def encode_string(string)
-              Base64.encode64(string).gsub("\n", '').gsub('/', '_').gsub('+', '-')
-            end
-        
-            REQUEST = {
-              :projectid         => {
-                  :maxlen   => 11,
-                  :required => true,
-                  :regex    => /^\d+$/
-              },
-              :orderid     => {
-                  :maxlen   => 40,
-                  :required => true,
-              },
-              :accepturl   => {
-                  :maxlen   => 255,
-                  :required => true,
-              },
-              :cancelurl   => {
-                  :maxlen   => 255,
-                  :required => true,
-              },
-              :callbackurl => {
-                  :maxlen   => 255,
-                  :required => true,
-              },
-              :version           => {
-                  :maxlen   => 9,
-                  :required => true,
-                  :regex    => /^\d+\.\d+$/
-              },
-              :lang              => {
-                  :maxlen   => 3,
-                  :required => false,
-                  :regex    => /^[a-z]{3}$/i
-              },
-              :amount            => {
-                  :maxlen   => 11,
-                  :required => false,
-                  :regex    => /^\d+$/
-              },
-              :currency          => {
-                  :maxlen   => 3,
-                  :required => false,
-                  :regex    => /^[a-z]{3}$/i
-              },
-              :payment           => {
-                  :maxlen   => 20,
-                  :required => false
-              },
-              :country           => {
-                  :maxlen   => 2,
-                  :required => false,
-                  :regex    => /^[a-z]{2}$/i
-              },
-              :paytext           => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_firstname       => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_lastname        => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_email           => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_street          => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_city            => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :p_state           => {
-                  :maxlen   => 20,
-                  :required => false,
-              },
-              :p_zip             => {
-                  :maxlen   => 20,
-                  :required => false,
-              },
-              :p_countrycode     => {
-                  :maxlen   => 2,
-                  :required => false,
-                  :regex    => /^[a-z]{2}$/i
-              },
-              :only_payments     => {
-                  :required => false,
-              },
-              :disallow_payments => {
-                  :required => false,
-              },
-              :test              => {
-                  :maxlen   => 1,
-                  :required => false,
-                  :regex    => /^[01]$/
-              },
-              :time_limit        => {
-                  :maxlen   => 19,
-                  :required => false,
-              },
-              :personcode        => {
-                  :maxlen   => 255,
-                  :required => false,
-              },
-              :developerid       => {
-                  :maxlen   => 11,
-                  :required => false,
-                  :regex    => /^\d+$/
-              }
+            request
+        end
+
+        def make_query(data)
+            data.collect do |key, value|
+            "#{CGI.escape(key.to_s)}=#{CGI.escape(value.to_s)}"
+            end.compact.sort! * '&'
+        end
+    
+        def sign_request(query, password)
+            Digest::MD5.hexdigest(query + password)
+        end
+    
+        def encode_string(string)
+            Base64.encode64(string).gsub("\n", '').gsub('/', '_').gsub('+', '-')
+        end
+    
+        REQUEST = {
+            :projectid         => {
+                :maxlen   => 11,
+                :required => true,
+                :regex    => /^\d+$/
+            },
+            :orderid     => {
+                :maxlen   => 40,
+                :required => true,
+            },
+            :accepturl   => {
+                :maxlen   => 255,
+                :required => true,
+            },
+            :cancelurl   => {
+                :maxlen   => 255,
+                :required => true,
+            },
+            :callbackurl => {
+                :maxlen   => 255,
+                :required => true,
+            },
+            :version           => {
+                :maxlen   => 9,
+                :required => true,
+                :regex    => /^\d+\.\d+$/
+            },
+            :lang              => {
+                :maxlen   => 3,
+                :required => false,
+                :regex    => /^[a-z]{3}$/i
+            },
+            :amount            => {
+                :maxlen   => 11,
+                :required => false,
+                :regex    => /^\d+$/
+            },
+            :currency          => {
+                :maxlen   => 3,
+                :required => false,
+                :regex    => /^[a-z]{3}$/i
+            },
+            :payment           => {
+                :maxlen   => 20,
+                :required => false
+            },
+            :country           => {
+                :maxlen   => 2,
+                :required => false,
+                :regex    => /^[a-z]{2}$/i
+            },
+            :paytext           => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_firstname       => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_lastname        => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_email           => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_street          => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_city            => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :p_state           => {
+                :maxlen   => 20,
+                :required => false,
+            },
+            :p_zip             => {
+                :maxlen   => 20,
+                :required => false,
+            },
+            :p_countrycode     => {
+                :maxlen   => 2,
+                :required => false,
+                :regex    => /^[a-z]{2}$/i
+            },
+            :only_payments     => {
+                :required => false,
+            },
+            :disallow_payments => {
+                :required => false,
+            },
+            :test              => {
+                :maxlen   => 1,
+                :required => false,
+                :regex    => /^[01]$/
+            },
+            :time_limit        => {
+                :maxlen   => 19,
+                :required => false,
+            },
+            :personcode        => {
+                :maxlen   => 255,
+                :required => false,
+            },
+            :developerid       => {
+                :maxlen   => 11,
+                :required => false,
+                :regex    => /^\d+$/
             }
+        }
     end
 end
