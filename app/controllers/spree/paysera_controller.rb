@@ -3,17 +3,17 @@ require 'cgi'
 require 'digest/md5'
 require 'net/http'
 require 'uri'
-require 'json'
 require 'openssl'
 require 'open-uri'
 module Spree
     class PayseraController < StoreController
         protect_from_forgery only: :index
         def index
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
-            success_url = paysera_confirm_url.to_s
-            callback_url = paysera_callback_url.to_s
-            cancel_url = paysera_cancel_url.to_s
+            payment_method_id = params[:payment_method_id]
+            payment_method = Spree::PaymentMethod.find_by(id: payment_method_id)
+            success_url = "/paysera/#{payment_method_id}/confirm"
+            callback_url = "/paysera/#{payment_method_id}/callback"
+            cancel_url = "/paysera/#{payment_method_id}/cancel"
             service_url = payment_method.preferred_service_url
             order = current_order || raise(ActiveRecord::RecordNotFound)
             amount = order.total*100
@@ -21,11 +21,11 @@ module Spree
             test_value = 1 if payment_method.preferred_test_mode
             options = {
                 orderid: order.number,
-                accepturl: payment_method.preferred_domain_name + success_url[21..-1],
-                cancelurl: payment_method.preferred_domain_name + cancel_url[21..-1],
-                callbackurl: payment_method.preferred_domain_name + callback_url[21..-1],
+                accepturl: payment_method.preferred_domain_name + success_url,
+                cancelurl: payment_method.preferred_domain_name + cancel_url,
+                callbackurl: payment_method.preferred_domain_name + callback_url,
                 amount: amount.to_i,
-                currency: 'EUR',
+                currency: order.currency,
                 test: test_value,
                 paytext: payment_method.preferred_message_text,
                 p_firstname: order.bill_address.firstname,
@@ -40,7 +40,7 @@ module Spree
             end
         end 
         def callback
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+            payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             Spree::LogEntry.create({
                 source: payment_method,
                 details: params.to_yaml
@@ -65,8 +65,6 @@ module Spree
             payment.complete
             order.next
             if order.payment_state == "paid"
-                #flash.notice = Spree.t(:order_processed_successfully)
-                #puts "****OK, payment received"
                 render plain: 'OK'
                 return
               else
@@ -75,7 +73,7 @@ module Spree
               end
         end
         def confirm
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+            payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             if params[:data].nil? 
                 flash.notice = 'Unexpected error.'
                 begin
@@ -84,7 +82,7 @@ module Spree
                 return
             end
             #parse response, perform validations etc.
-            response = parse(params) unless params[:data].nil?
+            response = parse(params)
             #check projectid
             raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
             #finding order
@@ -116,7 +114,7 @@ module Spree
         PAYSERA_PUBLIC_KEY = 'http://www.paysera.com/download/public.key'
         
         def parse(query)
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+            payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             render plain: "Error: data not found" if query[:data].nil?
             render plain: "Error: ss1 not found" if query[:ss1].nil?
             render plain: "Error: ss2 not found" if query[:ss2].nil?
@@ -161,7 +159,7 @@ module Spree
 
 
         def build_request(paysera_params)
-            payment_method = Spree::PaymentMethod.find_by(name: "Paysera")
+            payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = payment_method.preferred_api_version
             paysera_params[:projectid] = payment_method.preferred_project_id
