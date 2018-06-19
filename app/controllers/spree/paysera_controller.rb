@@ -79,7 +79,7 @@ module Spree
             if params[:data].nil? 
                 flash.notice = 'Unexpected error.'
                 begin
-                redirect_to checkout_state_path(order.state)
+                redirect_to products_path
                 end
                 return
             end
@@ -93,7 +93,7 @@ module Spree
             if order.payment_state != "paid"
                 flash.alert = 'Payment failed.'
                 begin
-                redirect_to products_path
+                redirect_to checkout_state_path(order.state)
                 end
                 return
             end
@@ -107,7 +107,7 @@ module Spree
         def cancel
             flash.notice = 'Payment has been canceled.'
             begin
-            redirect_to checkout_state_path(order.state)
+            redirect_to products_path
             end
         end
 
