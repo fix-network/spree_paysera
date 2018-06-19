@@ -47,22 +47,21 @@ module Spree
                 return
             end
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
+            raise send_error("invalid payment method") if payment_method.type != "Spree::Gateway::Paysera"
             Spree::LogEntry.create({
                 source: payment_method,
                 details: params.to_yaml
             })
-            #parse response, perform validations etc.
-            response = parse(params) unless params[:data].nil?
-            #check projectid
+            response = parse(params)
             raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
-            #find order in the database
             order = Spree::Order.find_by(number: response[:orderid])
-            #check for order amount
+
             money = order.total * 100
             if response[:payamount].to_i != money.to_i
-                render plain: 'ERROR. BAD ORDER AMOUNT'
+                render plain: 'Error: bad order amount'
                 return
             end
+
             payment = order.payments.create!({
                 source_type: 'Spree::Gateway::Paysera',
                 amount: order.total,
@@ -70,6 +69,7 @@ module Spree
             })
             payment.complete
             order.next
+
             if order.payment_state == "paid"
                 render plain: 'OK'
                 return
@@ -80,29 +80,28 @@ module Spree
         end
         def confirm
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
+            raise send_error("invalid payment method") if payment_method.type != "Spree::Gateway::Paysera"
             if params[:data].nil? 
                 begin
                 redirect_to products_path
                 end
                 return
             end
-            #parse response, perform validations etc.
             response = parse(params)
-            #check projectid
             raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
-            #finding order
             order = Spree::Order.find_by(number: response[:orderid])
-            #checking amount
+
             if order.payment_state != "paid"
                 flash.alert = 'Payment failed.'
                 begin
-                redirect_to checkout_state_path(order.state)
+                redirect_to cart_path
                 end
                 return
             end
+
             flash.notice = 'Payment completed successfully.'
             begin
-            redirect_to checkout_state_path(order.state)
+            redirect_to order_path(id: order.number)
             end
             return
         end
@@ -120,6 +119,7 @@ module Spree
         
         def parse(query)
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
+            raise send_error("invalid payment method") if payment_method.type != "Spree::Gateway::Paysera"
             render plain: "Error: data not found" if query[:data].nil?
             render plain: "Error: ss1 not found" if query[:ss1].nil?
             render plain: "Error: ss2 not found" if query[:ss2].nil?
@@ -165,6 +165,7 @@ module Spree
 
         def build_request(paysera_params)
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
+            raise send_error("invalid payment method") if payment_method.type != "Spree::Gateway::Paysera"
             paysera_params             = Hash[paysera_params.map { |k, v| [k.to_sym, v] }]
             paysera_params[:version]   = payment_method.preferred_api_version
             paysera_params[:projectid] = payment_method.preferred_project_id
