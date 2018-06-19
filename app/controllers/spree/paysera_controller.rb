@@ -92,14 +92,14 @@ module Spree
             order = Spree::Order.find_by(number: response[:orderid])
 
             if order.payment_state != "paid"
-                flash.alert = 'Payment failed.'
+                flash.alert = Spree.t(:payment_processing_failed)
                 begin
                 redirect_to cart_path
                 end
                 return
             end
 
-            flash.notice = 'Payment completed successfully.'
+            flash.notice = Spree.t(:order_approved)
             begin
             redirect_to order_path(id: order.number)
             end
@@ -107,7 +107,7 @@ module Spree
         end
 
         def cancel
-            flash.notice = 'Payment has been canceled.'
+            flash.notice = Spree.t(:order_canceled)
             begin
             redirect_to products_path
             end
