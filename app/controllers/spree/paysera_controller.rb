@@ -119,7 +119,7 @@ module Spree
 
 
         private
-        PAYSERA_PUBLIC_KEY = 'http://www.paysera.com/download/public.key'
+        PUBLIC_KEY = 'http://www.paysera.com/download/public.key'
         
         def parse(query)
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
@@ -137,7 +137,7 @@ module Spree
             render plain: "ss1 verification failed" unless valid_ss1? query[:data], query[:ss1], sign_password
             render plain: "ss2 verification failed" unless valid_ss2? query[:data], query[:ss2]
       
-            convert_to_hash safely_decode_string(query[:data])
+            convert_to_hash decode_string(query[:data])
           end
           def convert_to_hash(query)
             Hash[query.split('&').collect do |s|
@@ -146,9 +146,9 @@ module Spree
                  end]
           end
           def get_public_key
-            OpenSSL::X509::Certificate.new(open(PAYSERA_PUBLIC_KEY).read).public_key
+            OpenSSL::X509::Certificate.new(open(PUBLIC_KEY).read).public_key
           end
-          def safely_decode_string(string)
+          def decode_string(string)
             Base64.decode64 string.gsub('-', '+').gsub('_', '/').gsub("\n", '')
           end
           def valid_ss1?(data, ss1, sign_password)
@@ -157,7 +157,7 @@ module Spree
       
           def valid_ss2?(data, ss2)
             public_key = get_public_key
-            ss2        = safely_decode_string(unescape_string(ss2))
+            ss2        = decode_string(unescape_string(ss2))
             data       = unescape_string data
       
             public_key.verify(OpenSSL::Digest::SHA1.new, ss2, data)
