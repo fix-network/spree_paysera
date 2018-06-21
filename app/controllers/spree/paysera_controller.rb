@@ -14,11 +14,12 @@ module Spree
             success_url = "/paysera/#{payment_method_id}/confirm"
             callback_url = "/paysera/#{payment_method_id}/callback"
             cancel_url = "/paysera/#{payment_method_id}/cancel"
-            service_url = payment_method.preferred_service_url
+            service_url = payment_method.preferred_service_url.present? ? payment_method.preferred_service_url : 'https://www.paysera.lt/pay/?'
             order = current_order || raise(ActiveRecord::RecordNotFound)
             amount = order.total*100
             test_value = 0
             test_value = 1 if payment_method.preferred_test_mode
+            paytext_value = payment_method.preferred_message_text.present? ? payment_method.preferred_message_text : 'Payment'
             options = {
                 orderid: order.number,
                 accepturl: payment_method.preferred_domain_name + success_url,
@@ -27,7 +28,7 @@ module Spree
                 amount: amount.to_i,
                 currency: order.currency,
                 test: test_value,
-                paytext: payment_method.preferred_message_text,
+                paytext: paytext_value,
                 p_firstname: order.bill_address.firstname,
                 p_lastname: order.bill_address.lastname,
                 p_street: order.bill_address.address1 + " " + order.bill_address.address2,
@@ -53,7 +54,10 @@ module Spree
                 details: params.to_yaml
             })
             response = parse(params)
-            raise send_error("'projectid' mismatch") if response[:projectid].to_i != payment_method.preferred_project_id
+            if response[:projectid].to_i != payment_method.preferred_project_id
+                render plain: 'Error: project id does not match'
+                return
+            end
             order = Spree::Order.find_by(number: response[:orderid])
 
             money = order.total * 100
