@@ -1,6 +1,40 @@
 <span class="pay-with-text" style="font-size:20pt"><%=Spree.t(:pay_with, scope: 'paysera')%></span> <br /><br />
 <%= link_to(image_tag(payment_method.preferred_image_url), paysera_proceed_url(:payment_method_id => payment_method.id), :method => :post, :id => "paysera_button") %>
 <br /><br />
+<style>
+  .pay-with-text {
+      padding-bottom: 10px;
+  }
+</style>
 <script>
+Paysera = {
+    updateSaveAndContinueVisibility: function() {
+      if (this.isButtonHidden()) {
+        $(this).trigger('hideSaveAndContinue')
+      } else {
+        $(this).trigger('showSaveAndContinue')
+      }
+    },
+    isButtonHidden: function () {
+      paymentMethod = this.checkedPaymentMethod();
+      return (!$('#use_existing_card_yes:checked').length && Paysera.paymentMethodID && paymentMethod.val() == Paysera.paymentMethodID);
+    },
+    checkedPaymentMethod: function() {
+      return $('div[data-hook="checkout_payment_step"] input[type="radio"][name="order[payments_attributes][][payment_method_id]"]:checked');
+    },
+    hideSaveAndContinue: function() {
+      $("#checkout_form_payment [data-hook=buttons]").hide();
+    },
+    showSaveAndContinue: function() {
+      $("#checkout_form_payment [data-hook=buttons]").show();
+    }
+  }
+  
+  $(document).ready(function() {
+    Paysera.updateSaveAndContinueVisibility();
+    paymentMethods = $('div[data-hook="checkout_payment_step"] input[type="radio"]').click(function (e) {
+      Paysera.updateSaveAndContinueVisibility();
+    });
+  })
   Paysera.paymentMethodID = "<%= payment_method.id %>"  
 </script>
