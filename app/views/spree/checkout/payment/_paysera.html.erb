@@ -1,4 +1,4 @@
-<span class="pay-with-text" style="font-size:20pt"><%=Spree.t(:paywith, scope: 'paysera')%></span> <br /><br />
+<span class="pay-with-text" style="font-size:20pt"><%=Spree.t(:pay_with, scope: 'paysera')%></span> <br /><br />
 <%= link_to(image_tag(payment_method.preferred_image_url), paysera_proceed_url(:payment_method_id => payment_method.id), :method => :post, :id => "paysera_button") %>
 <br /><br />
 <script>
