@@ -12,8 +12,8 @@ module Spree
             payment_method_id = params[:payment_method_id]
             payment_method = Spree::PaymentMethod.find_by(id: payment_method_id)
             success_url = paysera_confirm_url(payment_method_id)
-            callback_url = paysera_callback(payment_method_id)
-            cancel_url = paysera_cancel(payment_method_id)
+            callback_url = paysera_callback_url(payment_method_id)
+            cancel_url = paysera_cancel_url(payment_method_id)
             service_url = payment_method.preferred_service_url.present? ? payment_method.preferred_service_url : 'https://www.paysera.lt/pay/?'
             order = current_order || raise(ActiveRecord::RecordNotFound)
             amount = order.total*100
