@@ -62,32 +62,44 @@ module Spree
             money = order.total * 100
             if response[:payamount].to_i >= money.to_i
                 if response[:payamount].to_i > money.to_i
-                    render plain: 'OK payamount is greater that order total'
-                    return
+                    payment = order.payments.create!({
+                        source_type: 'Spree::Gateway::Paysera',
+                        amount: order.total,
+                        payment_method: payment_method
+                    })
+                    payment.complete
+                    order.next
+        
+                    if order.payment_state == "paid"
+                        render plain: 'OK payment amount is greater than order total'
+                        return
+                    else
+                        render plain: 'Error processing payment'
+                        return
+                    end
                 else
-                    render plain: 'OK'
-                    return
+                    payment = order.payments.create!({
+                        source_type: 'Spree::Gateway::Paysera',
+                        amount: order.total,
+                        payment_method: payment_method
+                    })
+                    payment.complete
+                    order.next
+        
+                    if order.payment_state == "paid"
+                        render plain: 'OK'
+                        return
+                    else
+                        render plain: 'Error processing payment'
+                        return
+                    end
                 end
             else
                 render plain: 'Error: bad order amount'
                 return
             end
 
-            payment = order.payments.create!({
-                source_type: 'Spree::Gateway::Paysera',
-                amount: order.total,
-                payment_method: payment_method
-            })
-            payment.complete
-            order.next
 
-            if order.payment_state == "paid"
-                render plain: 'OK'
-                return
-              else
-                render plain: 'Error processing payment'
-                return
-              end
         end
         def confirm
             payment_method = Spree::PaymentMethod.find_by(id: params[:payment_method_id])
