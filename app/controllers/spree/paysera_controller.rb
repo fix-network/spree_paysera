@@ -124,7 +124,7 @@ module Spree
 
             flash.notice = Spree.t(:order_processed_successfully)
             begin
-            redirect_to completion_route(order)
+            redirect_to user_root_path
             end
             return
         end
