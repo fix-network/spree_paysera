@@ -64,7 +64,7 @@ module Spree
                 if response[:payamount].to_i > money.to_i
                     payment = order.payments.create!({
                         source_type: 'Spree::Gateway::Paysera',
-                        amount: order.total,
+                        amount: response[:payamount].to_d/100,
                         payment_method: payment_method
                     })
                     payment.complete
@@ -80,7 +80,7 @@ module Spree
                 else
                     payment = order.payments.create!({
                         source_type: 'Spree::Gateway::Paysera',
-                        amount: order.total,
+                        amount: response[:payamount].to_d/100,
                         payment_method: payment_method
                     })
                     payment.complete
