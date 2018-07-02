@@ -60,7 +60,15 @@ module Spree
             order = Spree::Order.find_by(number: response[:orderid])
 
             money = order.total * 100
-            if response[:payamount].to_i != money.to_i
+            if response[:payamount].to_i >= money.to_i
+                if response[:payamount].to_i > money.to_i
+                    render plain: 'OK payamount is greater that order total'
+                    return
+                else
+                    render plain: 'OK'
+                    return
+                end
+            else
                 render plain: 'Error: bad order amount'
                 return
             end
@@ -102,9 +110,9 @@ module Spree
                 return
             end
 
-            flash.notice = Spree.t(:order_approved)
+            flash.notice = Spree.t(:order_processed_successfully)
             begin
-            redirect_to order_path(id: order.number)
+            redirect_to completion_route(order)
             end
             return
         end

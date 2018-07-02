@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.name        = 'spree_paysera'
-  s.version     = '0.32'
+  s.version     = '0.33'
   s.summary     = 'Spree integration with Paysera.'
   s.description = 'Spree integration with Paysera.'
 
