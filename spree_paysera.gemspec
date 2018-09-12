@@ -5,7 +5,7 @@ Gem::Specification.new do |s|
   s.summary     = 'Spree integration with Paysera.'
   s.description = 'Spree integration with Paysera.'
 
-  s.author    = 'Donatas Jarmalovičius'
+  s.author    = 'Donatas Povilaitis'
   s.email     = 'ddonatasjar@gmail.com'
   s.homepage  = 'https://github.com/donny741/'
 
