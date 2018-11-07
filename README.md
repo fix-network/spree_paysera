@@ -6,7 +6,7 @@ Paysera payment gateway integration for Spree Ecommerce.
 
 1. Add this to your gemfile:
 
-        gem 'spree_paysera', :github => 'donny741/spree_paysera'
+        gem 'spree_paysera', :github => 'fix-network/spree_paysera'
 
 2. Install the gem using Bundler:
 
